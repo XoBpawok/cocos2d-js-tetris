@@ -12,7 +12,11 @@
 
     "jsList" : [
         "src/resource.js",
+
         "src/app.js",
+
+        "src/BlockClass.js",
+
         "src/BGLayer.js",
         "src/GameLayer.js",
         "src/ScoreLayer.js",

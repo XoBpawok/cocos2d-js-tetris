@@ -16,12 +16,13 @@ var GameLayer = cc.Layer.extend({
 	},
 
 	init: function() {
+		cc.log('init game started');
+
 		this._super();
 		this.initGrid();
 		this.status = gameStatus.play;
 		var that = this;
 		
-
 		this.createBlock();
 
 		this.createInterval();
@@ -29,12 +30,8 @@ var GameLayer = cc.Layer.extend({
 		cc.eventManager.addListener({
             event: cc.EventListener.KEYBOARD,
             onKeyPressed:function (key, event) {
-            	if (key === cc.KEY.left || key === cc.KEY.right || key === cc.KEY.down)
-                	that.blockGoToDirection(key, event);
-                if (key === cc.KEY.up)
-                	that.blockRotate(key, event);
-                if (key === cc.KEY.escape) {
-                	if (this.status !== gameStatus.play) {
+            	if (key === cc.KEY.escape) {
+                	if (that.status === gameStatus.play) {
 						that.gamePause();
 						if(that.menu === null){
 							that.menu = that.getParent().getChildByTag(TagOfLayer.inGameMenu);
@@ -42,8 +39,18 @@ var GameLayer = cc.Layer.extend({
 						that.menu.show();
                 	}
                 }
-            }
+                if (that.status === gameStatus.play) {
+                	if (key === cc.KEY.left || key === cc.KEY.right || key === cc.KEY.down){
+                		that.blockGoToDirection(key, event);
+                	}
+                	if (key === cc.KEY.up) {
+		        		that.blockRotate(key, event);
+		       		}
+		       	}
+        	}
         }, this);
+
+        cc.log('init game ended');
 	},
 
 	createInterval: function() {
@@ -55,16 +62,19 @@ var GameLayer = cc.Layer.extend({
 
 	gameRestart: function() {
 		this.init();
+		cc.log('game restarted');
 	},
 
 	gamePause: function() {
 		this.status = gameStatus.pause;
 		window.clearInterval(this.interval);
+		cc.log('game paused');
 	},
 
 	gameResume: function() {
 		this.status = gameStatus.play;
 		this.createInterval();
+		cc.log('game resumed');
 	},
 
 	initGrid: function() {
@@ -77,6 +87,8 @@ var GameLayer = cc.Layer.extend({
 			};
 			this.grid.push(row);
 		}
+
+		cc.log('grid initialized');
 	},
 
 	autoTurn: function() {
@@ -88,9 +100,6 @@ var GameLayer = cc.Layer.extend({
 		} else {
 			this.addBlockOnGround();
 			this.removeRows();
-
-
-
 			this.createBlock();
 		}
 	},
@@ -112,6 +121,8 @@ var GameLayer = cc.Layer.extend({
 			sprite;
 		var block = this.block;
 
+		cc.log('started to render block');
+
 		if (typeof centerPos === 'undefined' || typeof centerPos.x === 'undefined' || typeof centerPos.y === 'undefined') {
 			cc.log("didn't set position for rendering");
 		} else {
@@ -129,6 +140,8 @@ var GameLayer = cc.Layer.extend({
 			x: left,
 			y: top
 		};
+
+		cc.log('block is rendered');
 	},
 
 	addBlockOnGround: function() {
@@ -140,7 +153,7 @@ var GameLayer = cc.Layer.extend({
 			this.grid[pos.y/32][pos.x/32] = new Object(sprite);
 		};
 		this.block = null;
-		cc.log('sprite was added to the ground./nNow ground looks like:' + this.grid);
+		cc.log('sprite was added to the ground');
 	},
 
 	removeRows: function() {
@@ -150,6 +163,9 @@ var GameLayer = cc.Layer.extend({
 			j = 0,
 			m = 0,
 			n = 0;
+
+		cc.log('started removing lines');
+
 		for (i = 0; i < grid.length; i++) {
 			destroy = true;
 			for (j = 0; j < grid[i].length; j++) {
@@ -175,8 +191,11 @@ var GameLayer = cc.Layer.extend({
 				var scoreLayer = this.getParent().getChildByTag(TagOfLayer.score);
 				scoreLayer.addScore(1);
 				i--;
+				cc.log('line is removed');
 			}
 		}
+
+		cc.log('removing lines finished');
 	},
 
 	canGoDown: function() {
@@ -255,6 +274,8 @@ var GameLayer = cc.Layer.extend({
 			x: block.centerPosition.x + posDiff / 32,
 			y: block.centerPosition.y
 		}
+
+		cc.log('block moved ' + (direction === cc.KEY.left ? 'left' : 'right'));
 	},
 
 	blockGoToDirection: function(direction) {
@@ -263,7 +284,6 @@ var GameLayer = cc.Layer.extend({
 			case cc.KEY.right:
 				if (this.canGoSide(direction)) {
 					this.bockGoSide(direction);
-					cc.log('block moved left');
 				};
 				break;
 			case cc.KEY.down:
@@ -279,121 +299,23 @@ var GameLayer = cc.Layer.extend({
 		var block = this.block;
 		var sprite, spritePos;
 		var that = this;
-
-
-		var newBlock = getRotatedBlock();
 		
-		if (canRotate()) {
+		if (canBeRotated()) {
 			for (var i = 0; i < block.sprites.length; i++) {
 				this.removeChild(block.sprites[i]);
 			};
-			this.block = newBlock;
+			block.rotate();
 			this.renderBlock(block.centerPosition);
+
+			cc.log('block was rotated')
 		}
 
-		function canRotate() {
+		function canBeRotated() {
 			if (block.centerPosition.x - 1 > 0 && block.centerPosition.x < that.w - 1 && block.centerPosition.y - 1 >= 0 && block.centerPosition.y <= that.h - 1) {
 				return true;
 			}
 			return false;
 		}
 
-		function getRotatedBlock() {
-			var newBricks;
-			var bricks = block.getBricks();
-			var m, n;
-
-			m = bricks.length;
-			n = bricks[0].length;
-			newBricks = new Array(m);
-			for (var i = 0; i < newBricks.length; i++) {
-				newBricks[i] = [];
-			};
-
-			for (i = m - 1; i >= 0; i--) {
-				for (var j = 0; j < n; j++) {
-					newBricks[i].push(bricks[n - 1 - j][i]);
-				};
-			}
-
-			return (new Block()).create(newBricks);
-		}
-
 	}
-});
-
-var Block = function() {
-	var _bricks = [];
-	this.sprites = [];
-	this.centerPosition;
-	var that = this;
-
-	this.generate = function(m,n) {
-		var row = [];
-		var blockIsEmpty = true;
-		var brick;
-		for (var i = 0; i < m; i++) {
-			row = [];
-			for (var j = 0; j < n; j++) {
-				brick = rand();
-				if (brick === cellType.brick) {
-					blockIsEmpty = false;
-				}
-				row.push(brick);
-			};
-			_bricks.push(row);
-		}
-
-		cc.log(_bricks);
-
-		createSprites();
-
-		if (!blockIsEmpty) {
-			return this;
-		} else {
-			return this.generate(m,n);
-		}
-
-		function rand() {
-			return Math.round(Math.random());
-		}
-	}
-
-	this.create = function(bricks) {
-		_bricks = bricks;
-		createSprites();
-		return this;
-	}
-
-	this.getBricks = function() {
-		return _bricks;
-	}
-
-	function createSprites() {
-		var guiBrick;
-		for (var i = 0; i < _bricks.length; i++) {
-			for (var j = 0; j < _bricks[i].length; j++) {
-				if (_bricks[i][j] === cellType.brick) {
-					guiBrick = cc.Sprite.create(res.brick_png);
-					guiBrick.setAnchorPoint(0,0);
-					guiBrick.posInBlock = {
-						x: i,
-						y: j
-					};
-					that.sprites.push(guiBrick);
-				}
-			}
-		}
-	}
-};
-
-var GameScene = cc.Scene.extend({
-    onEnter: function() {
-        this._super();
-
-        this.addChild(new BGLayer(), 0, TagOfLayer.bg);
-        this.addChild(new GameLayer(), 0, TagOfLayer.game);
-        this.addChild(new ScoreLayer(), 0, TagOfLayer.score);
-        this.addChild(new InGameMenuLayer(), 0, TagOfLayer.inGameMenu);
-    }
 });
